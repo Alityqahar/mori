@@ -438,6 +438,51 @@ input, button {
 }
 
 .pomodoro {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.tab-switch {
+    display: inline-flex;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(31, 61, 43, 0.08);
+    box-shadow: 0 10px 22px rgba(23, 49, 36, 0.08);
+}
+
+.tab-btn {
+    border: none;
+    background: transparent;
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--muted);
+    transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, #8fb491, #6f9a75);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(23, 49, 36, 0.18);
+}
+
+.tab-panels {
+    width: 100%;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.timer-layout {
     display: grid;
     grid-template-columns: minmax(260px, 1.2fr) 1fr;
     gap: 18px;
@@ -564,6 +609,16 @@ input, button {
     color: #2f4b38;
 }
 
+.timer-face.secondary {
+    background: linear-gradient(135deg, rgba(246, 241, 233, 0.92), rgba(191, 209, 187, 0.26));
+}
+
+.mode-label.soft {
+    background: rgba(31, 61, 43, 0.06);
+    border-color: rgba(31, 61, 43, 0.12);
+    color: var(--deep);
+}
+
 .quotes {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -644,6 +699,10 @@ input, button {
     font-size: 13px;
 }
 
+.small {
+    font-size: 12px;
+}
+
 .empty {
     text-align: center;
     padding: 40px 20px;
@@ -697,6 +756,47 @@ input, button {
     min-width: 160px;
 }
 
+.report-card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(31, 61, 43, 0.08);
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 12px 26px rgba(23, 49, 36, 0.12);
+}
+
+.report-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.report-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.report-card .label {
+    margin: 0 0 4px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.report-card h3 {
+    margin: 0;
+    font-size: 28px;
+    color: var(--deep);
+}
+
+.pill.soft {
+    background: rgba(111, 154, 117, 0.12);
+    border-color: rgba(111, 154, 117, 0.32);
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -728,7 +828,7 @@ input, button {
     .main-columns {
     grid-template-rows: auto auto;
     }
-    .pomodoro,
+    .timer-layout,
     .quotes {
     grid-template-columns: 1fr;
     }

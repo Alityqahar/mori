@@ -6,7 +6,7 @@
     <title>Mori no Time — Soft focus, inspired by Ghibli forests</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="icon" type="image" href="assets/logo2.png">
+    <link rel="icon" type="image" href="assets/logo3.png">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;700&display=swap" rel="stylesheet">  
     <link rel="stylesheet" href="index.css">
     </head>
@@ -40,11 +40,7 @@
     </div>
     <header>
         <div class="brand">
-        <div class="leaf">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M19.59 3.41a2 2 0 0 0-2.12-.44C14.26 4.13 7.46 7.05 4.7 12.3c-2.1 4 .15 7.91 4.08 8.65 5.35.99 8.97-4.24 10.7-9.31.66-1.96.9-3.87.83-5.34a2 2 0 0 0-.72-1.89ZM12 13l5-5-5 2-5 5 5-2Z"></path>
-            </svg>
-        </div>
+            <img src="assets/logo3.png" style="width: 45px;">
         <div class="title-wrap">
             <h1>Mori no Time</h1>
             <p>Soft focus, inspired by Ghibli forests.</p>
@@ -70,34 +66,79 @@
 
         <section class="main-columns">
             <section class="card pomodoro" aria-label="Pomodoro timer">
-            <div class="timer-face">
-                <div class="ring" id="ring">
-                <div class="time-display" id="timeDisplay">25:00</div>
-                <div class="mode-label" id="modeLabel">Sesi fokus</div>
+            <div class="tab-switch" role="tablist" aria-label="Pilih mode timer">
+                <button class="tab-btn active" id="tabPomodoro" data-tab="pomodoroTab" role="tab" aria-selected="true" aria-controls="pomodoroTab">Pomodoro</button>
+                <button class="tab-btn" id="tabStopwatch" data-tab="stopwatchTab" role="tab" aria-selected="false" aria-controls="stopwatchTab">Stopwatch</button>
+            </div>
+
+            <div class="tab-panels">
+                <div class="tab-panel active" id="pomodoroTab" role="tabpanel" aria-labelledby="tabPomodoro">
+                <div class="timer-layout">
+                    <div class="timer-face">
+                    <div class="ring" id="ring">
+                        <div class="time-display" id="timeDisplay">25:00</div>
+                        <div class="mode-label" id="modeLabel">Sesi fokus</div>
+                    </div>
+                    </div>
+                    <div>
+                    <h2>Pomodoro Hutan Tenang</h2>
+                    <p class="sub">Mode kerja dan istirahat dengan alarm otomatis. Aktifkan musik alam jika perlu.</p>
+                    <div class="controls">
+                        <button class="btn" id="startBtn">Mulai</button>
+                        <button class="btn ghost" id="switchBtn">Ke Istirahat</button>
+                        <button class="btn ghost" id="resetBtn">Reset</button>
+                    </div>
+                    <div class="sliders">
+                        <label class="field">
+                        Durasi fokus (menit)
+                        <input type="number" id="workInput" min="5" max="120" value="25">
+                        </label>
+                        <label class="field">
+                        Durasi istirahat (menit)
+                        <input type="number" id="breakInput" min="3" max="60" value="5">
+                        </label>
+                    </div>
+                    <div class="toggles">
+                        <div class="toggle active" id="alarmToggle">Alarm aktif</div>
+                        <div class="toggle" id="ambientToggle">Musik tenang</div>
+                    </div>
+                    </div>
+                </div>
+                </div>
+
+                <div class="tab-panel" id="stopwatchTab" role="tabpanel" aria-labelledby="tabStopwatch">
+                <div class="timer-layout">
+                    <div class="timer-face secondary">
+                    <div class="ring" id="stopwatchRing">
+                        <div class="time-display" id="stopwatchDisplay">00:00:00</div>
+                        <div class="mode-label soft" id="stopwatchLabel">Stopwatch siap</div>
+                    </div>
+                    </div>
+                    <div>
+                    <h2>Stopwatch Fleksibel</h2>
+                    <p class="sub">Catat sesi belajar non-Pomodoro. Hitungan berjalan bebas.</p>
+                    <div class="controls">
+                        <button class="btn" id="stopwatchStart">Mulai</button>
+                        <button class="btn ghost" id="stopwatchReset">Reset</button>
+                    </div>
+                    <p class="muted small">Menjalankan stopwatch akan otomatis menjeda Pomodoro untuk mencegah double-count.</p>
+                    </div>
+                </div>
                 </div>
             </div>
-            <div>
-                <h2>Pomodoro Hutan Tenang</h2>
-                <p class="sub">Mode kerja dan istirahat dengan alarm otomatis. Aktifkan musik alam jika perlu.</p>
-                <div class="controls">
-                <button class="btn" id="startBtn">Mulai</button>
-                <button class="btn ghost" id="switchBtn">Ke Istirahat</button>
-                <button class="btn ghost" id="resetBtn">Reset</button>
+
+            <div class="report-card" aria-live="polite">
+                <div class="report-head">
+                <div>
+                    <p class="label">Daily Study Report</p>
+                    <h3 id="reportTotal">0m</h3>
                 </div>
-                <div class="sliders">
-                <label class="field">
-                    Durasi fokus (menit)
-                    <input type="number" id="workInput" min="5" max="120" value="25">
-                </label>
-                <label class="field">
-                    Durasi istirahat (menit)
-                    <input type="number" id="breakInput" min="3" max="60" value="5">
-                </label>
+                <div class="report-chips">
+                    <span class="pill soft" id="reportPomodoro">Pomodoro: 0m</span>
+                    <span class="pill soft" id="reportStopwatch">Stopwatch: 0m</span>
                 </div>
-                <div class="toggles">
-                <div class="toggle active" id="alarmToggle">Alarm aktif</div>
-                <div class="toggle" id="ambientToggle">Musik tenang</div>
                 </div>
+                <p class="muted small" id="reportUpdated">Hari ini</p>
             </div>
             </section>
 

@@ -135,7 +135,9 @@ const dateChip = document.getElementById("dateChip");
 
         renderTasks();
 
-        /* ---------- Pomodoro ---------- */
+        /* ---------- Pomodoro & Stopwatch ---------- */
+        const tabButtons = document.querySelectorAll(".tab-btn");
+        const tabPanels = document.querySelectorAll(".tab-panel");
         const timeDisplay = document.getElementById("timeDisplay");
         const modeLabel = document.getElementById("modeLabel");
         const startBtn = document.getElementById("startBtn");
@@ -146,6 +148,29 @@ const dateChip = document.getElementById("dateChip");
         const ring = document.getElementById("ring");
         const alarmToggle = document.getElementById("alarmToggle");
         const ambientToggle = document.getElementById("ambientToggle");
+        const stopwatchDisplay = document.getElementById("stopwatchDisplay");
+        const stopwatchStartBtn = document.getElementById("stopwatchStart");
+        const stopwatchResetBtn = document.getElementById("stopwatchReset");
+        const stopwatchRing = document.getElementById("stopwatchRing");
+        const stopwatchLabel = document.getElementById("stopwatchLabel");
+        const reportTotal = document.getElementById("reportTotal");
+        const reportPomodoro = document.getElementById("reportPomodoro");
+        const reportStopwatch = document.getElementById("reportStopwatch");
+        const reportUpdated = document.getElementById("reportUpdated");
+
+        tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const target = btn.dataset.tab;
+            tabButtons.forEach((b) => {
+            const active = b === btn;
+            b.classList.toggle("active", active);
+            b.setAttribute("aria-selected", active ? "true" : "false");
+            });
+            tabPanels.forEach((panel) => {
+            panel.classList.toggle("active", panel.id === target);
+            });
+        });
+        });
 
         // Audio elements
         const alarmAudio = new Audio("assets/alarm.mp3");
@@ -167,11 +192,86 @@ const dateChip = document.getElementById("dateChip");
         work: 25 * 60,
         break: 5 * 60,
         };
+        let stopwatchSeconds = 0;
+        let stopwatchRunning = false;
+        let stopwatchId = null;
+
+        const STUDY_LOG_KEY = "mori.study.log.v1";
+        let studyLog = loadStudyLog();
+
+        function loadStudyLog() {
+        try {
+            const saved = localStorage.getItem(STUDY_LOG_KEY);
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            console.warn("Gagal memuat log belajar:", e);
+            return {};
+        }
+        }
+
+        function saveStudyLog() {
+        localStorage.setItem(STUDY_LOG_KEY, JSON.stringify(studyLog));
+        }
+
+        function todayKey() {
+        const d = new Date();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${d.getFullYear()}-${m}-${day}`;
+        }
+
+        function ensureTodayEntry() {
+        const key = todayKey();
+        if (!studyLog[key]) {
+            studyLog[key] = { pomodoro: 0, stopwatch: 0 };
+        }
+        return studyLog[key];
+        }
 
         function formatTime(seconds) {
         const m = Math.floor(seconds / 60).toString().padStart(2, "0");
         const s = Math.floor(seconds % 60).toString().padStart(2, "0");
         return `${m}:${s}`;
+        }
+
+        function formatHMS(seconds) {
+        const total = Math.max(0, Math.floor(seconds));
+        const h = Math.floor(total / 3600).toString().padStart(2, "0");
+        const m = Math.floor((total % 3600) / 60).toString().padStart(2, "0");
+        const s = Math.floor(total % 60).toString().padStart(2, "0");
+        return `${h}:${m}:${s}`;
+        }
+
+        function formatDurationLabel(seconds) {
+        const total = Math.max(0, Math.floor(seconds));
+        const h = Math.floor(total / 3600);
+        const m = Math.floor((total % 3600) / 60);
+        const s = total % 60;
+        if (h > 0) return `${h}j ${m.toString().padStart(2, "0")}m`;
+        if (m > 0) return `${m}m ${s.toString().padStart(2, "0")}dtk`;
+        return `${s}dtk`;
+        }
+
+        function renderReport() {
+        const entry = ensureTodayEntry();
+        const total = (entry.pomodoro || 0) + (entry.stopwatch || 0);
+        reportTotal.textContent = formatDurationLabel(total);
+        reportPomodoro.textContent = `Pomodoro: ${formatDurationLabel(entry.pomodoro || 0)}`;
+        reportStopwatch.textContent = `Stopwatch: ${formatDurationLabel(entry.stopwatch || 0)}`;
+        const now = new Date();
+        reportUpdated.textContent = `Hari ini (${now.toLocaleDateString("id-ID", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+        })})`;
+        }
+
+        function addStudySeconds(source, seconds) {
+        if (seconds <= 0) return;
+        const entry = ensureTodayEntry();
+        entry[source] = (entry[source] || 0) + seconds;
+        saveStudyLog();
+        renderReport();
         }
 
         function updateRing() {
@@ -242,6 +342,9 @@ const dateChip = document.getElementById("dateChip");
         }
 
         function tick() {
+        if (mode === "work") {
+            addStudySeconds("pomodoro", 1);
+        }
         remaining -= 1;
         if (remaining <= 0) {
             beep();
@@ -254,6 +357,9 @@ const dateChip = document.getElementById("dateChip");
         if (isRunning) {
             pauseTimer();
             return;
+        }
+        if (stopwatchRunning) {
+            pauseStopwatch();
         }
         isRunning = true;
         timerId = setInterval(tick, 1000);
@@ -273,12 +379,61 @@ const dateChip = document.getElementById("dateChip");
         updateTimerUI();
         }
 
+        function updateStopwatchRing() {
+        const cycle = 3600;
+        const progress = (stopwatchSeconds % cycle) / cycle;
+        const deg = progress * 360;
+        stopwatchRing.style.background = `conic-gradient(#6f9a75 ${deg}deg, #d9e7d1 ${deg}deg)`;
+        }
+
+        function updateStopwatchUI() {
+        stopwatchDisplay.textContent = formatHMS(stopwatchSeconds);
+        const paused = stopwatchSeconds > 0 && !stopwatchRunning;
+        stopwatchLabel.textContent = stopwatchRunning ? "Sedang berjalan" : paused ? "Stopwatch dijeda" : "Stopwatch siap";
+        stopwatchStartBtn.textContent = stopwatchRunning ? "Jeda" : "Mulai";
+        updateStopwatchRing();
+        }
+
+        function tickStopwatch() {
+        stopwatchSeconds += 1;
+        addStudySeconds("stopwatch", 1);
+        updateStopwatchUI();
+        }
+
+        function startStopwatch() {
+        if (stopwatchRunning) {
+            pauseStopwatch();
+            return;
+        }
+        if (isRunning) {
+            pauseTimer();
+        }
+        stopwatchRunning = true;
+        stopwatchId = setInterval(tickStopwatch, 1000);
+        updateStopwatchUI();
+        }
+
+        function pauseStopwatch() {
+        stopwatchRunning = false;
+        clearInterval(stopwatchId);
+        stopwatchId = null;
+        updateStopwatchUI();
+        }
+
+        function resetStopwatch() {
+        pauseStopwatch();
+        stopwatchSeconds = 0;
+        updateStopwatchUI();
+        }
+
         startBtn.addEventListener("click", startTimer);
         switchBtn.addEventListener("click", () => {
         switchMode(mode === "work" ? "break" : "work");
         resetTimer();
         });
         resetBtn.addEventListener("click", resetTimer);
+        stopwatchStartBtn.addEventListener("click", startStopwatch);
+        stopwatchResetBtn.addEventListener("click", resetStopwatch);
 
         workInput.addEventListener("change", () => {
         const minutes = Math.min(120, Math.max(0.1, Number(workInput.value) || 25));
@@ -323,6 +478,8 @@ const dateChip = document.getElementById("dateChip");
         confirmAlarmBtn.addEventListener("click", closeAlarmModal);
 
         updateTimerUI();
+        updateStopwatchUI();
+        renderReport();
 
         /* ---------- Quotes ---------- */
         const quotes = [
