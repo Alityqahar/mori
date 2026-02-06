@@ -1,1074 +1,130 @@
 <!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mori no Time — Soft focus, inspired by Ghibli forests</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --sage: #b7c9a8;
-      --sage-strong: #8ba882;
-      --forest: #1f3d2b;
-      --deep: #173124;
-      --cream: #f6f1e9;
-      --mist: #e2e7da;
-      --accent: #d0e4c5;
-      --amber: #ffb26b;
-      --shadow: 0 24px 60px rgba(23, 49, 36, 0.16);
-      --card: rgba(246, 241, 233, 0.8);
-      --glass: rgba(246, 241, 233, 0.6);
-      --text: #203427;
-      --muted: #486250;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Manrope", "Segoe UI", sans-serif;
-      background: radial-gradient(120% 120% at 20% 20%, #e5f0df, #d9e7d1 35%, #bcd1b2 70%, #94b08f);
-      color: var(--text);
-      overflow-x: hidden;
-    }
-
-    .background-blobs::before,
-    .background-blobs::after {
-      content: "";
-      position: fixed;
-      width: 420px;
-      height: 420px;
-      border-radius: 50%;
-      filter: blur(90px);
-      z-index: 0;
-      opacity: 0.38;
-    }
-
-    .background-blobs::before {
-      background: #c3e0c0;
-      top: -80px;
-      left: -120px;
-    }
-
-    .background-blobs::after {
-      background: #b8c6a6;
-      bottom: -120px;
-      right: -120px;
-    }
-
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      backdrop-filter: blur(12px);
-      background: linear-gradient(180deg, rgba(246, 241, 233, 0.9), rgba(246, 241, 233, 0.6));
-      border-bottom: 1px solid rgba(31, 61, 43, 0.05);
-      padding: 18px 32px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .leaf {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #9fbc8f, #7da073);
-      display: grid;
-      place-items: center;
-      box-shadow: var(--shadow);
-    }
-
-    .leaf svg {
-      width: 26px;
-      height: 26px;
-      fill: #f6f1e9;
-    }
-
-    .title-wrap h1 {
-      margin: 0;
-      font-family: "Cormorant Garamond", serif;
-      letter-spacing: 0.02em;
-      font-size: 28px;
-      color: var(--deep);
-    }
-
-    .title-wrap p {
-      margin: 0;
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    .day-chip {
-      padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(31, 61, 43, 0.08);
-      border-radius: 14px;
-      font-size: 13px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 10px 30px rgba(23, 49, 36, 0.08);
-    }
-
-    main {
-      position: relative;
-      z-index: 1;
-      padding: 24px 28px 36px;
-    }
-
-    .shell {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 22px;
-      align-items: start;
-    }
-
-    .panel,
-    .card {
-      background: var(--card);
-      border: 1px solid rgba(23, 49, 36, 0.08);
-      box-shadow: var(--shadow);
-      border-radius: 20px;
-      padding: 20px;
-      backdrop-filter: blur(8px);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .panel::after,
-    .card::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(180px 180px at 90% 10%, rgba(255, 255, 255, 0.35), transparent);
-      pointer-events: none;
-    }
-
-    .panel {
-      min-height: 480px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .panel h2,
-    .card h2 {
-      margin: 0 0 6px;
-      font-size: 19px;
-      color: var(--deep);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .panel p.sub,
-    .card p.sub {
-      margin: 0 0 12px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .task-form {
-      display: grid;
-      grid-template-columns: 1fr 130px 48px;
-      gap: 10px;
-      align-items: center;
-    }
-
-    input, button {
-      font-family: "Manrope", "Segoe UI", sans-serif;
-    }
-
-    .task-form input[type="text"],
-    .task-form input[type="date"] {
-      width: 100%;
-      padding: 12px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(31, 61, 43, 0.12);
-      background: rgba(255, 255, 255, 0.8);
-      color: var(--deep);
-      outline: none;
-      transition: border 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .task-form input:focus {
-      border-color: var(--sage-strong);
-      box-shadow: 0 0 0 3px rgba(143, 175, 136, 0.25);
-    }
-
-    .btn {
-      border: none;
-      background: linear-gradient(135deg, #8fb491, #6f9a75);
-      color: #fff;
-      padding: 12px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: transform 0.1s ease, box-shadow 0.2s ease, filter 0.2s ease;
-      box-shadow: 0 14px 30px rgba(23, 49, 36, 0.18);
-    }
-
-    .btn:hover {
-      filter: brightness(1.03);
-      transform: translateY(-1px);
-    }
-
-    .btn:active {
-      transform: translateY(0);
-      box-shadow: 0 10px 16px rgba(23, 49, 36, 0.18);
-    }
-
-    .task-list {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 16px;
-      border: 1px solid rgba(31, 61, 43, 0.06);
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      overflow-y: auto;
-      max-height: 640px;
-    }
-
-    .task-item {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 10px;
-      align-items: center;
-      padding: 12px;
-      border-radius: 12px;
-      background: linear-gradient(120deg, rgba(191, 209, 187, 0.35), rgba(255, 255, 255, 0.7));
-      border: 1px solid rgba(31, 61, 43, 0.06);
-      transition: transform 0.15s ease, box-shadow 0.2s ease;
-    }
-
-    .task-item:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 18px rgba(23, 49, 36, 0.12);
-    }
-
-    .task-item.completed {
-      opacity: 0.72;
-      background: rgba(255, 255, 255, 0.6);
-    }
-
-    .check {
-      position: relative;
-      width: 22px;
-      height: 22px;
-    }
-
-    .check input {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    .box {
-      width: 22px;
-      height: 22px;
-      border-radius: 8px;
-      border: 2px solid #6f9a75;
-      display: grid;
-      place-items: center;
-      background: #f8f9f6;
-      transition: all 0.2s ease;
-      pointer-events: none;
-    }
-
-    .check input:checked + .box {
-      background: #6f9a75;
-      border-color: #6f9a75;
-    }
-
-    .box svg {
-      width: 14px;
-      height: 14px;
-      fill: #f6f1e9;
-      opacity: 0;
-      transition: opacity 0.15s ease;
-    }
-
-    .check input:checked + .box svg {
-      opacity: 1;
-    }
-
-    .task-body {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .task-title {
-      font-weight: 600;
-      color: var(--deep);
-    }
-
-    .task-meta {
-      font-size: 12px;
-      color: var(--muted);
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .pill {
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(111, 154, 117, 0.12);
-      color: #3c5a45;
-      border: 1px solid rgba(111, 154, 117, 0.28);
-    }
-
-    .pill.danger {
-      background: rgba(255, 178, 107, 0.18);
-      border-color: rgba(255, 178, 107, 0.5);
-      color: #8a4b1c;
-    }
-
-    .delete {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      border: 1px solid rgba(31, 61, 43, 0.08);
-      background: rgba(255, 255, 255, 0.9);
-      color: #9b5f40;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      transition: background 0.2s ease, transform 0.15s ease;
-    }
-
-    .delete:hover {
-      background: rgba(255, 178, 107, 0.18);
-      transform: translateY(-1px);
-    }
-
-    .main-columns {
-      display: grid;
-      grid-template-rows: 1.25fr 0.8fr;
-      gap: 18px;
-      min-height: 720px;
-    }
-
-    .pomodoro {
-      display: grid;
-      grid-template-columns: minmax(260px, 1.2fr) 1fr;
-      gap: 18px;
-      align-items: center;
-    }
-
-    .timer-face {
-      background: linear-gradient(160deg, rgba(191, 209, 187, 0.35), rgba(255, 255, 255, 0.7));
-      border-radius: 18px;
-      padding: 20px;
-      border: 1px solid rgba(31, 61, 43, 0.06);
-      display: grid;
-      place-items: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .ring {
-      width: 230px;
-      height: 230px;
-      border-radius: 50%;
-      background: conic-gradient(#6f9a75 0deg, #d9e7d1 0deg);
-      display: grid;
-      place-items: center;
-      position: relative;
-      transition: background 0.3s linear;
-    }
-
-    .ring::after {
-      content: "";
-      width: 190px;
-      height: 190px;
-      border-radius: 50%;
-      background: rgba(246, 241, 233, 0.95);
-      box-shadow: inset 0 0 30px rgba(23, 49, 36, 0.08);
-    }
-
-    .time-display {
-      position: absolute;
-      font-size: 46px;
-      font-weight: 700;
-      color: var(--deep);
-      letter-spacing: 1px;
-    }
-
-    .mode-label {
-      position: absolute;
-      bottom: 18px;
-      background: rgba(111, 154, 117, 0.12);
-      border: 1px solid rgba(111, 154, 117, 0.35);
-      color: #2f4b38;
-      border-radius: 999px;
-      padding: 6px 12px;
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .controls {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
-      align-items: end;
-    }
-
-    .ghost {
-      background: rgba(111, 154, 117, 0.12);
-      color: #2f4b38;
-      border: 1px solid rgba(111, 154, 117, 0.35);
-      box-shadow: none;
-    }
-
-    .ghost:hover {
-      filter: brightness(1.02);
-    }
-
-    .sliders {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 8px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .field input[type="number"] {
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px solid rgba(31, 61, 43, 0.12);
-      background: rgba(255, 255, 255, 0.85);
-      color: var(--deep);
-      outline: none;
-    }
-
-    .toggles {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-
-    .toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(31, 61, 43, 0.08);
-      background: rgba(255, 255, 255, 0.8);
-      cursor: pointer;
-      transition: transform 0.1s ease, background 0.2s ease;
-    }
-
-    .toggle.active {
-      background: rgba(111, 154, 117, 0.16);
-      border-color: rgba(111, 154, 117, 0.4);
-      color: #2f4b38;
-    }
-
-    .quotes {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 18px;
-      align-items: center;
-    }
-
-    .quote-box {
-      background: linear-gradient(135deg, rgba(246, 241, 233, 0.9), rgba(191, 209, 187, 0.3));
-      border-radius: 16px;
-      padding: 20px;
-      border: 1px solid rgba(31, 61, 43, 0.08);
-      position: relative;
-      overflow: hidden;
-      min-height: 180px;
-    }
-
-    .quote-box::before {
-      content: "";
-      position: absolute;
-      top: -30px;
-      right: -40px;
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      background: radial-gradient(closest-side, rgba(255, 255, 255, 0.65), transparent);
-    }
-
-    .quote-text {
-      font-family: "Cormorant Garamond", serif;
-      font-size: 26px;
-      line-height: 1.4;
-      color: var(--deep);
-      margin: 0 0 10px;
-      opacity: 1;
-      transition: opacity 0.4s ease;
-    }
-
-    .quote-author {
-      margin: 0;
-      font-size: 14px;
-      color: var(--muted);
-      letter-spacing: 0.4px;
-    }
-
-    .quote-text.fade {
-      opacity: 0;
-    }
-
-    .quote-meta {
-      background: rgba(111, 154, 117, 0.12);
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(111, 154, 117, 0.3);
-      color: #2f4b38;
-      font-size: 13px;
-    }
-
-    .floating {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .chip {
-      padding: 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.85);
-      border: 1px solid rgba(31, 61, 43, 0.08);
-      color: var(--deep);
-      font-weight: 600;
-      text-align: center;
-      box-shadow: 0 12px 30px rgba(23, 49, 36, 0.09);
-    }
-
-    .muted {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .empty {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--muted);
-      border: 2px dashed rgba(31, 61, 43, 0.12);
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.6);
-    }
-
-    @media (max-width: 1040px) {
-      header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .shell {
-        grid-template-columns: 1fr;
-      }
-      .main-columns {
-        grid-template-rows: auto auto;
-      }
-      .pomodoro,
-      .quotes {
-        grid-template-columns: 1fr;
-      }
-      .task-form {
-        grid-template-columns: 1fr 1fr;
-        grid-template-areas:
-          "title title"
-          "date button";
-      }
-      .task-form input[type="text"] { grid-area: title; }
-      .task-form input[type="date"] { grid-area: date; }
-      .task-form .btn { grid-area: button; }
-    }
-
-    @media (max-width: 640px) {
-      main { padding: 18px; }
-      header { padding: 14px 18px; }
-      .ring { width: 190px; height: 190px; }
-      .ring::after { width: 156px; height: 156px; }
-      .time-display { font-size: 38px; }
-    }
-  </style>
-</head>
+    <html lang="id">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mori no Time — Soft focus, inspired by Ghibli forests</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" type="image" href="assets/logo2.png">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="index.css">
+    </head>
 <body class="background-blobs">
-  <header>
-    <div class="brand">
-      <div class="leaf">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M19.59 3.41a2 2 0 0 0-2.12-.44C14.26 4.13 7.46 7.05 4.7 12.3c-2.1 4 .15 7.91 4.08 8.65 5.35.99 8.97-4.24 10.7-9.31.66-1.96.9-3.87.83-5.34a2 2 0 0 0-.72-1.89ZM12 13l5-5-5 2-5 5 5-2Z"></path>
+    <div class="ghibli-decor" aria-hidden="true">
+        <svg class="totoro" viewBox="0 0 160 160">
+            <ellipse cx="80" cy="100" rx="60" ry="50" fill="#7da073" />
+            <path d="M52 76 Q80 28 108 76 Z" fill="#7da073" />
+            <ellipse cx="80" cy="110" rx="38" ry="32" fill="#f6f1e9" />
+            <circle cx="63" cy="74" r="6" fill="#7da073" />
+            <circle cx="97" cy="74" r="6" fill="#7da073" />
+            <ellipse cx="66" cy="92" rx="7" ry="5" fill="#f6f1e9" />
+            <ellipse cx="94" cy="92" rx="7" ry="5" fill="#f6f1e9" />
+            <circle cx="70" cy="90" r="2" fill="#1f3d2b" />
+            <circle cx="90" cy="90" r="2" fill="#1f3d2b" />
         </svg>
-      </div>
-      <div class="title-wrap">
-        <h1>Mori no Time</h1>
-        <p>Soft focus, inspired by Ghibli forests.</p>
-      </div>
+        <svg class="kodama" viewBox="0 0 80 120">
+            <circle cx="40" cy="32" r="26" fill="#f6f1e9" stroke="#dce6d6" stroke-width="3" />
+            <path d="M18 60 Q40 82 62 60 Q68 90 60 114 Q40 122 20 114 Q12 90 18 60 Z" fill="#f6f1e9" stroke="#dce6d6" stroke-width="3" />
+            <circle cx="30" cy="32" r="6" fill="#1f3d2b" />
+            <circle cx="52" cy="30" r="5" fill="#1f3d2b" />
+            <circle cx="40" cy="42" r="3" fill="#1f3d2b" />
+        </svg>
+        <svg class="leafy" viewBox="0 0 140 160">
+            <path d="M18 132 C40 90 78 48 128 26 C112 70 88 116 46 146 Z" fill="#9fbc8f" stroke="#7da073" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M62 108 L102 74" stroke="#7da073" stroke-width="6" stroke-linecap="round" />
+        </svg>
+        <div class="soot-sprite one"><span></span></div>
+        <div class="soot-sprite two"><span></span></div>
+        <div class="soot-sprite three"><span></span></div>
     </div>
-    <div class="day-chip" id="dateChip">
-      Hari ini
-    </div>
-  </header>
+    <header>
+        <div class="brand">
+        <div class="leaf">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19.59 3.41a2 2 0 0 0-2.12-.44C14.26 4.13 7.46 7.05 4.7 12.3c-2.1 4 .15 7.91 4.08 8.65 5.35.99 8.97-4.24 10.7-9.31.66-1.96.9-3.87.83-5.34a2 2 0 0 0-.72-1.89ZM12 13l5-5-5 2-5 5 5-2Z"></path>
+            </svg>
+        </div>
+        <div class="title-wrap">
+            <h1>Mori no Time</h1>
+            <p>Soft focus, inspired by Ghibli forests.</p>
+        </div>
+        </div>
+        <div class="day-chip" id="dateChip">
+        Hari ini
+        </div>
+    </header>
 
-  <main>
-    <div class="shell">
-      <aside class="panel" aria-label="Task management">
-        <h2>Task Grove</h2>
-        <p class="sub">Kelola tugas berbasis deadline agar fokus tetap terarah.</p>
-        <form class="task-form" id="taskForm" autocomplete="off">
-          <input type="text" id="taskTitle" name="taskTitle" placeholder="Tugas baru: contoh - Rangkum Bab 3" required>
-          <input type="date" id="taskDue" name="taskDue" required>
-          <button class="btn" type="submit" aria-label="Tambah tugas">+</button>
-        </form>
-        <div class="task-list" id="taskList" aria-live="polite"></div>
-      </aside>
+    <main>
+        <div class="shell">
+        <aside class="panel" aria-label="Task management">
+            <h2>Task Grove</h2>
+            <p class="sub">Kelola tugas berbasis deadline agar fokus tetap terarah.</p>
+            <form class="task-form" id="taskForm" autocomplete="off">
+            <input type="text" id="taskTitle" name="taskTitle" placeholder="Tugas baru: contoh - Rangkum Bab 3" required>
+            <input type="date" id="taskDue" name="taskDue" required>
+            <button class="btn" type="submit" aria-label="Tambah tugas">+</button>
+            </form>
+            <div class="task-list" id="taskList" aria-live="polite"></div>
+        </aside>
 
-      <section class="main-columns">
-        <section class="card pomodoro" aria-label="Pomodoro timer">
-          <div class="timer-face">
-            <div class="ring" id="ring">
-              <div class="time-display" id="timeDisplay">25:00</div>
-              <div class="mode-label" id="modeLabel">Sesi fokus</div>
+        <section class="main-columns">
+            <section class="card pomodoro" aria-label="Pomodoro timer">
+            <div class="timer-face">
+                <div class="ring" id="ring">
+                <div class="time-display" id="timeDisplay">25:00</div>
+                <div class="mode-label" id="modeLabel">Sesi fokus</div>
+                </div>
             </div>
-          </div>
-          <div>
-            <h2>Pomodoro Hutan Tenang</h2>
-            <p class="sub">Mode kerja dan istirahat dengan alarm otomatis. Aktifkan musik alam jika perlu.</p>
-            <div class="controls">
-              <button class="btn" id="startBtn">Mulai</button>
-              <button class="btn ghost" id="switchBtn">Ke Istirahat</button>
-              <button class="btn ghost" id="resetBtn">Reset</button>
+            <div>
+                <h2>Pomodoro Hutan Tenang</h2>
+                <p class="sub">Mode kerja dan istirahat dengan alarm otomatis. Aktifkan musik alam jika perlu.</p>
+                <div class="controls">
+                <button class="btn" id="startBtn">Mulai</button>
+                <button class="btn ghost" id="switchBtn">Ke Istirahat</button>
+                <button class="btn ghost" id="resetBtn">Reset</button>
+                </div>
+                <div class="sliders">
+                <label class="field">
+                    Durasi fokus (menit)
+                    <input type="number" id="workInput" min="5" max="120" value="25">
+                </label>
+                <label class="field">
+                    Durasi istirahat (menit)
+                    <input type="number" id="breakInput" min="3" max="60" value="5">
+                </label>
+                </div>
+                <div class="toggles">
+                <div class="toggle active" id="alarmToggle">Alarm aktif</div>
+                <div class="toggle" id="ambientToggle">Musik tenang</div>
+                </div>
             </div>
-            <div class="sliders">
-              <label class="field">
-                Durasi fokus (menit)
-                <input type="number" id="workInput" min="5" max="120" value="25">
-              </label>
-              <label class="field">
-                Durasi istirahat (menit)
-                <input type="number" id="breakInput" min="3" max="60" value="5">
-              </label>
+            </section>
+
+            <section class="card quotes" aria-label="Quote of the day">
+            <div class="quote-box">
+                <p class="quote-text" id="quoteText">"Belajar dengan tenang, hasilkan karya yang terang."</p>
+                <p class="quote-author" id="quoteAuthor">— Mori no Time</p>
             </div>
-            <div class="toggles">
-              <div class="toggle active" id="alarmToggle">Alarm aktif</div>
-              <div class="toggle" id="ambientToggle">Musik hutan</div>
+            <div class="floating">
+                <div class="chip">Quotes of the Day</div>
+                <div class="quote-meta" id="quoteMeta">Fokus, istirahat, ulangi. Semangat.</div>
             </div>
-          </div>
+            </section>
         </section>
+        </div>
+        <img src="assets/totoro1.png" style="position: fixed; top: 450px; left: 0;width: 800px;">
+    </main>
 
-        <section class="card quotes" aria-label="Quote of the day">
-          <div class="quote-box">
-            <p class="quote-text" id="quoteText">"Belajar dengan tenang, hasilkan karya yang terang."</p>
-            <p class="quote-author" id="quoteAuthor">— Mori no Time</p>
-          </div>
-          <div class="floating">
-            <div class="chip">Quotes berganti otomatis setiap hari</div>
-            <div class="quote-meta" id="quoteMeta">Fokus, istirahat, ulangi. Semangat.</div>
-          </div>
-        </section>
-      </section>
+    <!-- Alarm Modal -->
+    <div class="alarm-modal" id="alarmModal">
+        <div class="alarm-content">
+            <h3>⏰ Waktu Istirahat!</h3>
+            <p id="alarmMessage">Sesi fokus Anda telah selesai. Ambil waktu untuk istirahat.</p>
+            <button class="btn" id="confirmAlarm">Saya Siap</button>
+        </div>
     </div>
-  </main>
 
-  <script>
-    const dateChip = document.getElementById("dateChip");
-    const today = new Date();
-    dateChip.textContent = today.toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    });
-
-    /* ---------- Task Manager ---------- */
-    const taskForm = document.getElementById("taskForm");
-    const taskTitle = document.getElementById("taskTitle");
-    const taskDue = document.getElementById("taskDue");
-    const taskList = document.getElementById("taskList");
-    const STORAGE_KEY = "mori.tasks.v1";
-
-    let tasks = loadTasks();
-
-    function loadTasks() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : [];
-      } catch (e) {
-        console.warn("Gagal memuat tasks:", e);
-        return [];
-      }
-    }
-
-    function saveTasks() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    }
-
-    function relativeDateLabel(dateStr) {
-      const today = new Date();
-      const target = new Date(dateStr + "T00:00:00");
-      const diff = Math.round((target - today) / (1000 * 60 * 60 * 24));
-      if (isNaN(diff)) return "Tanpa tanggal";
-      if (diff === 0) return "Hari ini";
-      if (diff === 1) return "Besok";
-      if (diff < 0) return `${Math.abs(diff)} hari lalu`;
-      return `Dalam ${diff} hari`;
-    }
-
-    function sortTasks() {
-      tasks.sort((a, b) => {
-        const da = new Date(a.due).getTime();
-        const db = new Date(b.due).getTime();
-        return da - db;
-      });
-    }
-
-    function renderTasks() {
-      sortTasks();
-      taskList.innerHTML = "";
-      if (!tasks.length) {
-        taskList.innerHTML = '<div class="empty">Daftar tugas kosong. Tambahkan satu dan mulai fokus.</div>';
-        return;
-      }
-
-      const frag = document.createDocumentFragment();
-      tasks.forEach((task) => {
-        const item = document.createElement("div");
-        item.className = "task-item" + (task.done ? " completed" : "");
-        item.dataset.id = task.id;
-
-        const label = document.createElement("label");
-        label.className = "check";
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = task.done;
-        const box = document.createElement("span");
-        box.className = "box";
-        box.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-        label.append(checkbox, box);
-
-        const body = document.createElement("div");
-        body.className = "task-body";
-        const title = document.createElement("div");
-        title.className = "task-title";
-        title.textContent = task.title;
-        const meta = document.createElement("div");
-        meta.className = "task-meta";
-        const due = document.createElement("span");
-        const overdue = new Date(task.due) < new Date(today.toDateString());
-        due.className = "pill" + (overdue && !task.done ? " danger" : "");
-        due.textContent = relativeDateLabel(task.due);
-        const dateText = document.createElement("span");
-        dateText.textContent = new Date(task.due + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-        meta.append(due, dateText);
-        body.append(title, meta);
-
-        const del = document.createElement("button");
-        del.className = "delete";
-        del.innerHTML = "&times;";
-        del.title = "Hapus tugas";
-
-        item.append(label, body, del);
-        frag.appendChild(item);
-      });
-      taskList.appendChild(frag);
-    }
-
-    taskForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const title = taskTitle.value.trim();
-      const due = taskDue.value;
-      if (!title || !due) return;
-      tasks.push({
-        id: crypto.randomUUID(),
-        title,
-        due,
-        done: false,
-        createdAt: Date.now()
-      });
-      saveTasks();
-      renderTasks();
-      taskForm.reset();
-      taskTitle.focus();
-    });
-
-    taskList.addEventListener("click", (e) => {
-      const id = e.target.closest(".task-item")?.dataset.id;
-      if (!id) return;
-      if (e.target.matches("input[type='checkbox']")) {
-        tasks = tasks.map((t) => (t.id === id ? { ...t, done: e.target.checked } : t));
-        saveTasks();
-        renderTasks();
-      }
-      if (e.target.closest(".delete")) {
-        tasks = tasks.filter((t) => t.id !== id);
-        saveTasks();
-        renderTasks();
-      }
-    });
-
-    renderTasks();
-
-    /* ---------- Pomodoro ---------- */
-    const timeDisplay = document.getElementById("timeDisplay");
-    const modeLabel = document.getElementById("modeLabel");
-    const startBtn = document.getElementById("startBtn");
-    const switchBtn = document.getElementById("switchBtn");
-    const resetBtn = document.getElementById("resetBtn");
-    const workInput = document.getElementById("workInput");
-    const breakInput = document.getElementById("breakInput");
-    const ring = document.getElementById("ring");
-    const alarmToggle = document.getElementById("alarmToggle");
-    const ambientToggle = document.getElementById("ambientToggle");
-
-    let mode = "work";
-    let isRunning = false;
-    let remaining = 25 * 60;
-    let timerId = null;
-    let durations = {
-      work: 25 * 60,
-      break: 5 * 60,
-    };
-
-    function formatTime(seconds) {
-      const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-      const s = Math.floor(seconds % 60).toString().padStart(2, "0");
-      return `${m}:${s}`;
-    }
-
-    function updateRing() {
-      const total = durations[mode] || 1;
-      const progress = Math.max(0, remaining) / total;
-      const deg = progress * 360;
-      ring.style.background = `conic-gradient(#6f9a75 ${deg}deg, #d9e7d1 ${deg}deg)`;
-    }
-
-    function updateTimerUI() {
-      timeDisplay.textContent = formatTime(remaining);
-      modeLabel.textContent = mode === "work" ? "Sesi fokus" : "Istirahat singkat";
-      switchBtn.textContent = mode === "work" ? "Ke Istirahat" : "Ke Fokus";
-      startBtn.textContent = isRunning ? "Jeda" : "Mulai";
-      updateRing();
-    }
-
-    function beep() {
-      if (!alarmToggle.classList.contains("active")) return;
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = "sine";
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.1);
-      g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 1);
-      o.connect(g).connect(ctx.destination);
-      o.start();
-      o.stop(ctx.currentTime + 1.05);
-    }
-
-    let ambientCtx = null;
-    let ambientNodes = [];
-
-    function startAmbient() {
-      if (ambientCtx) return;
-      ambientCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const noiseBuffer = ambientCtx.createBuffer(1, ambientCtx.sampleRate * 2, ambientCtx.sampleRate);
-      const data = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = (Math.random() * 2 - 1) * 0.12;
-      }
-      const noise = ambientCtx.createBufferSource();
-      noise.buffer = noiseBuffer;
-      noise.loop = true;
-      const filter = ambientCtx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = 650;
-      const gain = ambientCtx.createGain();
-      gain.gain.value = 0.18;
-      noise.connect(filter).connect(gain).connect(ambientCtx.destination);
-
-      const pad = ambientCtx.createOscillator();
-      pad.type = "sine";
-      pad.frequency.value = 174;
-      const padGain = ambientCtx.createGain();
-      padGain.gain.value = 0.05;
-      pad.connect(padGain).connect(ambientCtx.destination);
-
-      noise.start();
-      pad.start();
-      ambientNodes = [noise, pad, filter, gain, padGain];
-    }
-
-    function stopAmbient() {
-      ambientNodes.forEach((node) => {
-        if (node.stop) {
-          try { node.stop(); } catch (e) {}
-        }
-        if (node.disconnect) node.disconnect();
-      });
-      ambientNodes = [];
-      ambientCtx = null;
-    }
-
-    function switchMode(next) {
-      mode = next;
-      remaining = durations[mode];
-      updateTimerUI();
-    }
-
-    function tick() {
-      remaining -= 1;
-      if (remaining <= 0) {
-        beep();
-        const nextMode = mode === "work" ? "break" : "work";
-        switchMode(nextMode);
-        remaining = durations[nextMode];
-      }
-      updateTimerUI();
-    }
-
-    function startTimer() {
-      if (isRunning) {
-        pauseTimer();
-        return;
-      }
-      isRunning = true;
-      timerId = setInterval(tick, 1000);
-      updateTimerUI();
-    }
-
-    function pauseTimer() {
-      isRunning = false;
-      clearInterval(timerId);
-      timerId = null;
-      updateTimerUI();
-    }
-
-    function resetTimer() {
-      pauseTimer();
-      remaining = durations[mode];
-      updateTimerUI();
-    }
-
-    startBtn.addEventListener("click", startTimer);
-    switchBtn.addEventListener("click", () => {
-      switchMode(mode === "work" ? "break" : "work");
-      resetTimer();
-    });
-    resetBtn.addEventListener("click", resetTimer);
-
-    workInput.addEventListener("change", () => {
-      const minutes = Math.min(120, Math.max(5, Number(workInput.value) || 25));
-      workInput.value = minutes;
-      durations.work = minutes * 60;
-      if (mode === "work" && !isRunning) {
-        remaining = durations.work;
-        updateTimerUI();
-      }
-    });
-
-    breakInput.addEventListener("change", () => {
-      const minutes = Math.min(60, Math.max(3, Number(breakInput.value) || 5));
-      breakInput.value = minutes;
-      durations.break = minutes * 60;
-      if (mode === "break" && !isRunning) {
-        remaining = durations.break;
-        updateTimerUI();
-      }
-    });
-
-    alarmToggle.addEventListener("click", () => {
-      alarmToggle.classList.toggle("active");
-      alarmToggle.textContent = alarmToggle.classList.contains("active") ? "Alarm aktif" : "Alarm mati";
-    });
-
-    ambientToggle.addEventListener("click", async () => {
-      const willPlay = !ambientToggle.classList.contains("active");
-      ambientToggle.classList.toggle("active");
-      ambientToggle.textContent = willPlay ? "Musik hutan on" : "Musik hutan off";
-      if (willPlay) {
-        try {
-          await startAmbient();
-        } catch (e) {
-          console.warn("Audio context diblokir:", e);
-        }
-      } else {
-        stopAmbient();
-      }
-    });
-
-    updateTimerUI();
-
-    /* ---------- Quotes ---------- */
-    const quotes = [
-      { text: "Perlahan itu juga maju, asal tidak berhenti.", author: "Unknown" },
-      { text: "Fokus adalah kebaikan terbesar bagi waktu.", author: "James Clear" },
-      { text: "Ketika belajar terasa berat, kecilkan langkahnya, lanjutkan jalannya.", author: "Mori no Time" },
-      { text: "Ketenangan bukan absen suara, tapi hadirnya kejelasan.", author: "Thomas à Kempis" },
-      { text: "Satu halaman per hari mengalahkan niat seribu halaman besok.", author: "Unknown" },
-      { text: "Istirahat adalah bagian dari strategi, bukan kemewahan.", author: "Alex Soojung-Kim Pang" },
-      { text: "Kerjakan yang paling penting saat energi paling tinggi.", author: "Cal Newport" },
-      { text: "Belajar adalah berteman dengan rasa ingin tahu.", author: "Carl Sagan" },
-      { text: "Progress kecil konsisten lebih kuat dari ledakan singkat.", author: "James Clear" },
-      { text: "Tenang adalah kecepatan yang stabil.", author: "Unknown" },
-      { text: "Beri dirimu izin untuk lambat, tapi tidak untuk berhenti.", author: "Unknown" },
-      { text: "Konsentrasi tumbuh di tempat yang rapi dan bernapas.", author: "Mori no Time" },
-    ];
-
-    const quoteText = document.getElementById("quoteText");
-    const quoteAuthor = document.getElementById("quoteAuthor");
-    const quoteMeta = document.getElementById("quoteMeta");
-
-    function dayOfYear(d) {
-      const start = new Date(d.getFullYear(), 0, 0);
-      const diff = d - start + (start.getTimezoneOffset() - d.getTimezoneOffset()) * 60 * 1000;
-      return Math.floor(diff / (1000 * 60 * 60 * 24));
-    }
-
-    function setQuote() {
-      const idx = dayOfYear(new Date()) % quotes.length;
-      const q = quotes[idx];
-      quoteText.classList.add("fade");
-      setTimeout(() => {
-        quoteText.textContent = `"${q.text}"`;
-        quoteAuthor.textContent = `— ${q.author}`;
-        quoteText.classList.remove("fade");
-      }, 300);
-      quoteMeta.textContent = "Diperbarui: " + today.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-    }
-
-    setQuote();
-  </script>
-</body>
-</html>
+    <script src="script.js"></script>
+    </body>
+    </html>
