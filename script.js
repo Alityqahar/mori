@@ -33,7 +33,7 @@ const dateChip = document.getElementById("dateChip");
         function relativeDateLabel(dateStr) {
         const today = new Date();
         const target = new Date(dateStr + "T00:00:00");
-        const diff = Math.round((target - today) / (1000 * 60 * 60 * 24));
+        const diff = Math.round((target - today) / (1000 * 60 * 60 * 24))+1;
         if (isNaN(diff)) return "Tanpa tanggal";
         if (diff === 0) return "Hari ini";
         if (diff === 1) return "Besok";
