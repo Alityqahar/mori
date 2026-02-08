@@ -157,6 +157,7 @@ const dateChip = document.getElementById("dateChip");
         const reportPomodoro = document.getElementById("reportPomodoro");
         const reportStopwatch = document.getElementById("reportStopwatch");
         const reportUpdated = document.getElementById("reportUpdated");
+        const defaultTitle = "Mori no Time — Soft focus, inspired by Ghibli forests";
 
         tabButtons.forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -172,11 +173,20 @@ const dateChip = document.getElementById("dateChip");
         });
         });
 
-        // Audio elements
+        // Audio elements dengan loop otomatis
         const alarmAudio = new Audio("assets/alarm.mp3");
         const ambientAudio = new Audio("assets/ambient.mp3");
-        ambientAudio.loop = true;
-        alarmAudio.volume = 0.5; // 2x lipat volume
+        ambientAudio.loop = true; // Loop otomatis
+        alarmAudio.volume = 0.5;
+        ambientAudio.volume = 0.6;
+
+        // Tambahkan event listener untuk memastikan loop berfungsi
+        ambientAudio.addEventListener('ended', function() {
+            if (ambientToggle.classList.contains("active")) {
+                this.currentTime = 0;
+                this.play().catch(e => console.warn("Gagal loop musik:", e));
+            }
+        });
 
         // Modal elements
         const alarmModal = document.getElementById("alarmModal");
@@ -185,16 +195,23 @@ const dateChip = document.getElementById("dateChip");
 
         let mode = "work";
         let isRunning = false;
+        let isStopwatchRunning = false;
         let isModalWaiting = false;
         let remaining = 25 * 60;
-        let timerId = null;
-        let durations = {
-        work: 25 * 60,
-        break: 5 * 60,
-        };
         let stopwatchSeconds = 0;
-        let stopwatchRunning = false;
-        let stopwatchId = null;
+        
+        // Timestamp-based timing untuk akurasi
+        let timerStartTimestamp = null;
+        let timerPausedRemaining = null; // Untuk menyimpan waktu tersisa saat pause
+        let stopwatchStartTimestamp = null;
+        let stopwatchPausedSeconds = 0; // Untuk menyimpan waktu tersisa saat pause
+        let animationFrameId = null;
+        let lastRecordedSecond = -1; // Tracking untuk mencegah double-count
+        
+        let durations = {
+            work: 25 * 60,
+            break: 5 * 60,
+        };
 
         const STUDY_LOG_KEY = "mori.study.log.v1";
         let studyLog = loadStudyLog();
@@ -252,6 +269,16 @@ const dateChip = document.getElementById("dateChip");
         return `${s}dtk`;
         }
 
+        function updateDocumentTitle() {
+        if (isRunning) {
+            document.title = `${formatTime(remaining)} - Pomodoro - Mori no Time`;
+        } else if (isStopwatchRunning) {
+            document.title = `${formatHMS(stopwatchSeconds)} - Stopwatch - Mori no Time`;
+        } else {
+            document.title = defaultTitle;
+        }
+        }
+
         function renderReport() {
         const entry = ensureTodayEntry();
         const total = (entry.pomodoro || 0) + (entry.stopwatch || 0);
@@ -287,6 +314,7 @@ const dateChip = document.getElementById("dateChip");
         switchBtn.textContent = mode === "work" ? "Ke Istirahat" : "Ke Fokus";
         startBtn.textContent = isRunning ? "Jeda" : "Mulai";
         updateRing();
+        updateDocumentTitle();
         }
 
         function beep() {
@@ -294,7 +322,7 @@ const dateChip = document.getElementById("dateChip");
         alarmAudio.currentTime = 0;
         alarmAudio.play().catch(e => console.warn("Gagal memutar alarm:", e));
         showAlarmModal();
-        pauseTimer();
+        stopTimerLoop();
         isModalWaiting = true;
         }
 
@@ -315,19 +343,19 @@ const dateChip = document.getElementById("dateChip");
         alarmAudio.currentTime = 0;
         isModalWaiting = false;
         
-        // Lanjutkan ke mode berikutnya dan mulai timer
+        // Switch ke mode berikutnya dan mulai timer otomatis
         const nextMode = mode === "work" ? "break" : "work";
         switchMode(nextMode);
         remaining = durations[nextMode];
         updateTimerUI();
-        startTimer();
+        startTimerLoop();
         }
 
-        let ambientCtx = null;
-        let ambientNodes = [];
-
         function startAmbient() {
-        ambientAudio.play().catch(e => console.warn("Gagal memutar musik alam:", e));
+        return ambientAudio.play().catch(e => {
+            console.warn("Gagal memutar musik alam:", e);
+            throw e;
+        });
         }
 
         function stopAmbient() {
@@ -341,46 +369,107 @@ const dateChip = document.getElementById("dateChip");
         updateTimerUI();
         }
 
-        function tick() {
-        if (mode === "work") {
-            addStudySeconds("pomodoro", 1);
-        }
-        remaining -= 1;
-        if (remaining <= 0) {
-            beep();
-        }
+        function resetTimer() {
+        stopTimerLoop();
+        remaining = durations[mode];
+        timerPausedRemaining = null;
         updateTimerUI();
         }
 
-        function startTimer() {
-        if (isModalWaiting) return;
-        if (isRunning) {
-            pauseTimer();
+        // Timestamp-based timer loop (mencegah drift waktu)
+        function timerLoop() {
+        if (!isRunning) return;
+
+        const now = Date.now();
+        const elapsed = Math.floor((now - timerStartTimestamp) / 1000);
+        const newRemaining = (timerPausedRemaining !== null ? timerPausedRemaining : durations[mode]) - elapsed;
+
+        // Cek apakah timer selesai
+        if (newRemaining <= 0) {
+            remaining = 0;
+            updateTimerUI();
+            beep();
             return;
         }
-        if (stopwatchRunning) {
-            pauseStopwatch();
+
+        remaining = newRemaining;
+        
+        // Tambah study seconds hanya 1x per detik untuk mode work
+        if (elapsed !== lastRecordedSecond && mode === "work") {
+            addStudySeconds("pomodoro", 1);
+            lastRecordedSecond = elapsed;
         }
+
+        updateTimerUI();
+        animationFrameId = requestAnimationFrame(timerLoop);
+        }
+
+        function startTimerLoop() {
+        if (isModalWaiting) return;
+        
+        // Toggle pause/resume
+        if (isRunning) {
+            stopTimerLoop();
+            return;
+        }
+        
+        // Hentikan stopwatch jika sedang berjalan
+        if (isStopwatchRunning) {
+            stopStopwatchLoop();
+        }
+        
         isRunning = true;
-        timerId = setInterval(tick, 1000);
+        
+        // Set timestamp berdasarkan apakah ini resume atau start baru
+        if (timerPausedRemaining !== null) {
+            // Resume dari pause
+            timerStartTimestamp = Date.now();
+            lastRecordedSecond = -1;
+        } else {
+            // Start baru
+            timerStartTimestamp = Date.now();
+            timerPausedRemaining = remaining;
+            lastRecordedSecond = -1;
+        }
+        
+        animationFrameId = requestAnimationFrame(timerLoop);
         updateTimerUI();
         }
 
-        function pauseTimer() {
+        function stopTimerLoop() {
         isRunning = false;
-        clearInterval(timerId);
-        timerId = null;
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+        // Simpan waktu tersisa untuk resume
+        timerPausedRemaining = remaining;
+        timerStartTimestamp = null;
+        lastRecordedSecond = -1;
         updateTimerUI();
         }
 
-        function resetTimer() {
-        pauseTimer();
-        remaining = durations[mode];
-        updateTimerUI();
+        // Stopwatch timestamp-based loop
+        function stopwatchLoop() {
+        if (!isStopwatchRunning) return;
+
+        const now = Date.now();
+        const elapsed = Math.floor((now - stopwatchStartTimestamp) / 1000);
+        stopwatchSeconds = stopwatchPausedSeconds + elapsed;
+
+        // Tambah study seconds hanya 1x per detik
+        const currentSecond = stopwatchSeconds;
+        if (currentSecond !== lastRecordedSecond) {
+            addStudySeconds("stopwatch", 1);
+            lastRecordedSecond = currentSecond;
+        }
+
+        updateStopwatchUI();
+        animationFrameId = requestAnimationFrame(stopwatchLoop);
         }
 
         function updateStopwatchRing() {
-        const cycle = 3600;
+        const cycle = 3600; // 1 jam cycle
         const progress = (stopwatchSeconds % cycle) / cycle;
         const deg = progress * 360;
         stopwatchRing.style.background = `conic-gradient(#6f9a75 ${deg}deg, #d9e7d1 ${deg}deg)`;
@@ -388,51 +477,59 @@ const dateChip = document.getElementById("dateChip");
 
         function updateStopwatchUI() {
         stopwatchDisplay.textContent = formatHMS(stopwatchSeconds);
-        const paused = stopwatchSeconds > 0 && !stopwatchRunning;
-        stopwatchLabel.textContent = stopwatchRunning ? "Sedang berjalan" : paused ? "Stopwatch dijeda" : "Stopwatch siap";
-        stopwatchStartBtn.textContent = stopwatchRunning ? "Jeda" : "Mulai";
+        const paused = stopwatchSeconds > 0 && !isStopwatchRunning;
+        stopwatchLabel.textContent = isStopwatchRunning ? "Sedang berjalan" : paused ? "Stopwatch dijeda" : "Stopwatch siap";
+        stopwatchStartBtn.textContent = isStopwatchRunning ? "Jeda" : "Mulai";
         updateStopwatchRing();
+        updateDocumentTitle();
         }
 
-        function tickStopwatch() {
-        stopwatchSeconds += 1;
-        addStudySeconds("stopwatch", 1);
-        updateStopwatchUI();
-        }
-
-        function startStopwatch() {
-        if (stopwatchRunning) {
-            pauseStopwatch();
+        function startStopwatchLoop() {
+        // Toggle pause/resume
+        if (isStopwatchRunning) {
+            stopStopwatchLoop();
             return;
         }
+        
+        // Hentikan pomodoro timer jika sedang berjalan
         if (isRunning) {
-            pauseTimer();
+            stopTimerLoop();
         }
-        stopwatchRunning = true;
-        stopwatchId = setInterval(tickStopwatch, 1000);
+        
+        isStopwatchRunning = true;
+        stopwatchStartTimestamp = Date.now();
+        lastRecordedSecond = stopwatchSeconds - 1; // Set agar detik pertama langsung tercatat
+        animationFrameId = requestAnimationFrame(stopwatchLoop);
         updateStopwatchUI();
         }
 
-        function pauseStopwatch() {
-        stopwatchRunning = false;
-        clearInterval(stopwatchId);
-        stopwatchId = null;
+        function stopStopwatchLoop() {
+        isStopwatchRunning = false;
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+        // Simpan waktu tersisa untuk resume
+        stopwatchPausedSeconds = stopwatchSeconds;
+        stopwatchStartTimestamp = null;
         updateStopwatchUI();
         }
 
         function resetStopwatch() {
-        pauseStopwatch();
+        stopStopwatchLoop();
         stopwatchSeconds = 0;
+        stopwatchPausedSeconds = 0;
+        lastRecordedSecond = -1;
         updateStopwatchUI();
         }
 
-        startBtn.addEventListener("click", startTimer);
+        startBtn.addEventListener("click", startTimerLoop);
         switchBtn.addEventListener("click", () => {
         switchMode(mode === "work" ? "break" : "work");
         resetTimer();
         });
         resetBtn.addEventListener("click", resetTimer);
-        stopwatchStartBtn.addEventListener("click", startStopwatch);
+        stopwatchStartBtn.addEventListener("click", startStopwatchLoop);
         stopwatchResetBtn.addEventListener("click", resetStopwatch);
 
         workInput.addEventListener("change", () => {
@@ -441,6 +538,7 @@ const dateChip = document.getElementById("dateChip");
         durations.work = minutes * 60;
         if (mode === "work" && !isRunning) {
             remaining = durations.work;
+            timerPausedRemaining = null;
             updateTimerUI();
         }
         });
@@ -451,6 +549,7 @@ const dateChip = document.getElementById("dateChip");
         durations.break = minutes * 60;
         if (mode === "break" && !isRunning) {
             remaining = durations.break;
+            timerPausedRemaining = null;
             updateTimerUI();
         }
         });
@@ -469,6 +568,9 @@ const dateChip = document.getElementById("dateChip");
             await startAmbient();
             } catch (e) {
             console.warn("Audio context diblokir:", e);
+            // Revert toggle jika gagal
+            ambientToggle.classList.remove("active");
+            ambientToggle.textContent = "Musik off";
             }
         } else {
             stopAmbient();
@@ -476,6 +578,13 @@ const dateChip = document.getElementById("dateChip");
         });
 
         confirmAlarmBtn.addEventListener("click", closeAlarmModal);
+
+        // Cleanup on page unload
+        window.addEventListener("beforeunload", () => {
+        stopTimerLoop();
+        stopStopwatchLoop();
+        stopAmbient();
+        });
 
         updateTimerUI();
         updateStopwatchUI();
