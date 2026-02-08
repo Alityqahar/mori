@@ -208,10 +208,17 @@ const dateChip = document.getElementById("dateChip");
         let animationFrameId = null;
         let lastRecordedSecond = -1; // Tracking untuk mencegah double-count
         
+        // Interval untuk update title (bekerja di background)
+        let titleUpdateInterval = null;
+        let backgroundUpdateInterval = null;
+        
         let durations = {
             work: 25 * 60,
             break: 5 * 60,
         };
+
+        // State persistence key
+        const TIMER_STATE_KEY = "mori.timer.state.v1";
 
         const STUDY_LOG_KEY = "mori.study.log.v1";
         let studyLog = loadStudyLog();
@@ -228,6 +235,49 @@ const dateChip = document.getElementById("dateChip");
 
         function saveStudyLog() {
         localStorage.setItem(STUDY_LOG_KEY, JSON.stringify(studyLog));
+        }
+
+        // Timer state persistence
+        function saveTimerState() {
+        const state = {
+            mode,
+            isRunning,
+            isStopwatchRunning,
+            remaining,
+            stopwatchSeconds,
+            timerStartTimestamp,
+            timerPausedRemaining,
+            stopwatchStartTimestamp,
+            stopwatchPausedSeconds,
+            durations,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(TIMER_STATE_KEY, JSON.stringify(state));
+        }
+
+        function loadTimerState() {
+        try {
+            const saved = localStorage.getItem(TIMER_STATE_KEY);
+            if (!saved) return null;
+            
+            const state = JSON.parse(saved);
+            const now = Date.now();
+            
+            // Jika lebih dari 1 menit, abaikan state lama
+            if (now - state.timestamp > 60000) {
+                localStorage.removeItem(TIMER_STATE_KEY);
+                return null;
+            }
+            
+            return state;
+        } catch (e) {
+            console.warn("Gagal memuat timer state:", e);
+            return null;
+        }
+        }
+
+        function clearTimerState() {
+        localStorage.removeItem(TIMER_STATE_KEY);
         }
 
         function todayKey() {
@@ -270,13 +320,47 @@ const dateChip = document.getElementById("dateChip");
         }
 
         function updateDocumentTitle() {
-        if (isRunning) {
-            document.title = `${formatTime(remaining)} - Pomodoro - Mori no Time`;
-        } else if (isStopwatchRunning) {
-            document.title = `${formatHMS(stopwatchSeconds)} - Stopwatch - Mori no Time`;
-        } else {
-            document.title = defaultTitle;
+        let titleText = defaultTitle;
+        
+        if (isRunning && timerStartTimestamp) {
+            // Hitung remaining berdasarkan timestamp real-time
+            const now = Date.now();
+            const elapsed = Math.floor((now - timerStartTimestamp) / 1000);
+            const currentRemaining = (timerPausedRemaining !== null ? timerPausedRemaining : durations[mode]) - elapsed;
+            const displayRemaining = Math.max(0, currentRemaining);
+            titleText = `${formatTime(displayRemaining)} - Pomodoro - Mori no Time`;
+        } else if (isStopwatchRunning && stopwatchStartTimestamp) {
+            // Hitung stopwatch berdasarkan timestamp real-time
+            const now = Date.now();
+            const elapsed = Math.floor((now - stopwatchStartTimestamp) / 1000);
+            const currentSeconds = stopwatchPausedSeconds + elapsed;
+            titleText = `${formatHMS(currentSeconds)} - Stopwatch - Mori no Time`;
         }
+        
+        document.title = titleText;
+        }
+
+        // Fungsi untuk update title di background (bekerja saat tab tidak aktif)
+        function startTitleUpdates() {
+        if (titleUpdateInterval) {
+            clearInterval(titleUpdateInterval);
+        }
+        
+        // Update setiap 500ms untuk smooth countdown di title
+        titleUpdateInterval = setInterval(() => {
+            if (isRunning || isStopwatchRunning) {
+                updateDocumentTitle();
+                saveTimerState(); // Save state untuk recovery
+            }
+        }, 500);
+        }
+
+        function stopTitleUpdates() {
+        if (titleUpdateInterval) {
+            clearInterval(titleUpdateInterval);
+            titleUpdateInterval = null;
+        }
+        document.title = defaultTitle;
         }
 
         function renderReport() {
@@ -373,6 +457,7 @@ const dateChip = document.getElementById("dateChip");
         stopTimerLoop();
         remaining = durations[mode];
         timerPausedRemaining = null;
+        clearTimerState();
         updateTimerUI();
         }
 
@@ -433,6 +518,7 @@ const dateChip = document.getElementById("dateChip");
         }
         
         animationFrameId = requestAnimationFrame(timerLoop);
+        startTitleUpdates(); // Mulai update title
         updateTimerUI();
         }
 
@@ -446,6 +532,8 @@ const dateChip = document.getElementById("dateChip");
         timerPausedRemaining = remaining;
         timerStartTimestamp = null;
         lastRecordedSecond = -1;
+        stopTitleUpdates(); // Hentikan update title
+        clearTimerState(); // Clear state saat stop
         updateTimerUI();
         }
 
@@ -500,6 +588,7 @@ const dateChip = document.getElementById("dateChip");
         stopwatchStartTimestamp = Date.now();
         lastRecordedSecond = stopwatchSeconds - 1; // Set agar detik pertama langsung tercatat
         animationFrameId = requestAnimationFrame(stopwatchLoop);
+        startTitleUpdates(); // Mulai update title
         updateStopwatchUI();
         }
 
@@ -512,6 +601,8 @@ const dateChip = document.getElementById("dateChip");
         // Simpan waktu tersisa untuk resume
         stopwatchPausedSeconds = stopwatchSeconds;
         stopwatchStartTimestamp = null;
+        stopTitleUpdates(); // Hentikan update title
+        clearTimerState(); // Clear state saat stop
         updateStopwatchUI();
         }
 
@@ -584,7 +675,98 @@ const dateChip = document.getElementById("dateChip");
         stopTimerLoop();
         stopStopwatchLoop();
         stopAmbient();
+        stopTitleUpdates();
         });
+
+        // Page Visibility API - update lebih agresif saat tab tidak aktif
+        document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            // Tab tidak aktif - title update tetap jalan via setInterval
+            console.log("Tab hidden - title updates continue");
+        } else {
+            // Tab aktif kembali - sync state dan update UI
+            console.log("Tab visible - syncing state");
+            if (isRunning && timerStartTimestamp) {
+                // Re-calculate remaining berdasarkan timestamp
+                const now = Date.now();
+                const elapsed = Math.floor((now - timerStartTimestamp) / 1000);
+                const newRemaining = (timerPausedRemaining !== null ? timerPausedRemaining : durations[mode]) - elapsed;
+                remaining = Math.max(0, newRemaining);
+                
+                if (remaining <= 0 && !isModalWaiting) {
+                    beep();
+                } else {
+                    updateTimerUI();
+                }
+            }
+            
+            if (isStopwatchRunning && stopwatchStartTimestamp) {
+                // Re-calculate stopwatch berdasarkan timestamp
+                const now = Date.now();
+                const elapsed = Math.floor((now - stopwatchStartTimestamp) / 1000);
+                stopwatchSeconds = stopwatchPausedSeconds + elapsed;
+                updateStopwatchUI();
+            }
+        }
+        });
+
+        // Recovery state saat page load
+        function recoverTimerState() {
+        const savedState = loadTimerState();
+        if (!savedState) return;
+        
+        // Restore state
+        mode = savedState.mode;
+        durations = savedState.durations;
+        
+        // Update inputs
+        workInput.value = durations.work / 60;
+        breakInput.value = durations.break / 60;
+        
+        const now = Date.now();
+        const timeSinceLastUpdate = now - savedState.timestamp;
+        
+        // Jika timer sedang running
+        if (savedState.isRunning && savedState.timerStartTimestamp) {
+            const totalElapsed = Math.floor((now - savedState.timerStartTimestamp) / 1000);
+            const newRemaining = (savedState.timerPausedRemaining !== null ? savedState.timerPausedRemaining : savedState.durations[savedState.mode]) - totalElapsed;
+            
+            if (newRemaining > 0) {
+                // Resume timer
+                remaining = newRemaining;
+                timerPausedRemaining = savedState.timerPausedRemaining;
+                isRunning = true;
+                timerStartTimestamp = savedState.timerStartTimestamp;
+                lastRecordedSecond = -1;
+                animationFrameId = requestAnimationFrame(timerLoop);
+                startTitleUpdates();
+                updateTimerUI();
+            } else {
+                // Timer sudah selesai
+                remaining = 0;
+                updateTimerUI();
+                if (timeSinceLastUpdate < 5000) { // Jika baru saja selesai
+                    beep();
+                }
+            }
+        }
+        
+        // Jika stopwatch sedang running
+        if (savedState.isStopwatchRunning && savedState.stopwatchStartTimestamp) {
+            const totalElapsed = Math.floor((now - savedState.stopwatchStartTimestamp) / 1000);
+            stopwatchSeconds = savedState.stopwatchPausedSeconds + totalElapsed;
+            stopwatchPausedSeconds = savedState.stopwatchPausedSeconds;
+            isStopwatchRunning = true;
+            stopwatchStartTimestamp = savedState.stopwatchStartTimestamp;
+            lastRecordedSecond = stopwatchSeconds - 1;
+            animationFrameId = requestAnimationFrame(stopwatchLoop);
+            startTitleUpdates();
+            updateStopwatchUI();
+        }
+        }
+
+        // Jalankan recovery saat page load
+        recoverTimerState();
 
         updateTimerUI();
         updateStopwatchUI();
