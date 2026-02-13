@@ -406,7 +406,6 @@ const dateChip = document.getElementById("dateChip");
         alarmAudio.currentTime = 0;
         alarmAudio.play().catch(e => console.warn("Gagal memutar alarm:", e));
         showAlarmModal();
-        stopTimerLoop();
         isModalWaiting = true;
         }
 
@@ -430,7 +429,7 @@ const dateChip = document.getElementById("dateChip");
         // Switch ke mode berikutnya dan mulai timer otomatis
         const nextMode = mode === "work" ? "break" : "work";
         switchMode(nextMode);
-        remaining = durations[nextMode];
+        timerPausedRemaining = null; // Mulai sesi baru dengan durasi penuh
         updateTimerUI();
         startTimerLoop();
         }
@@ -472,8 +471,18 @@ const dateChip = document.getElementById("dateChip");
         // Cek apakah timer selesai
         if (newRemaining <= 0) {
             remaining = 0;
+            stopTimerLoop({ preserveRemaining: false });
             updateTimerUI();
-            beep();
+
+            // Jika alarm aktif, tampilkan modal; jika tidak, otomatis lanjut ke mode berikutnya
+            if (alarmToggle.classList.contains("active")) {
+                beep();
+            } else {
+                const nextMode = mode === "work" ? "break" : "work";
+                switchMode(nextMode);
+                timerPausedRemaining = null;
+                startTimerLoop();
+            }
             return;
         }
 
@@ -522,14 +531,16 @@ const dateChip = document.getElementById("dateChip");
         updateTimerUI();
         }
 
-        function stopTimerLoop() {
+        function stopTimerLoop(options = {}) {
+        const { preserveRemaining = true } = options;
+
         isRunning = false;
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
         }
-        // Simpan waktu tersisa untuk resume
-        timerPausedRemaining = remaining;
+        // Simpan waktu tersisa untuk resume, kecuali saat timer selesai
+        timerPausedRemaining = preserveRemaining ? remaining : null;
         timerStartTimestamp = null;
         lastRecordedSecond = -1;
         stopTitleUpdates(); // Hentikan update title
